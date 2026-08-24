@@ -1,0 +1,3 @@
+import {PrismaClient} from "@prisma/client"; import bcrypt from "bcryptjs";
+const db=new PrismaClient();
+async function main(){const hash=await bcrypt.hash("ChangeMe-12345!",12);const u=await db.user.upsert({where:{email:"demo@alerte-citoyen.ci"},update:{},create:{name:"Compte Démo",email:"demo@alerte-citoyen.ci",passwordHash:hash,role:"ADMIN"}});await db.alert.create({data:{reference:"AC-DEMO001",type:"MISSING_PERSON",title:"Exemple de personne portée disparue",description:"Alerte de démonstration. Ne pas utiliser comme donnée réelle.",city:"Abidjan",country:"Côte d'Ivoire",status:"ACTIVE",authorId:u.id}})}main().finally(()=>db.$disconnect());
