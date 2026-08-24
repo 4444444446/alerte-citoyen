@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: alerte-citoyen
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alerte-citoyen-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+databases:
+  - name: alerte-citoyen-db
+    plan: basic-256mb
