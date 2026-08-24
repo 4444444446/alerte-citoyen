@@ -1,0 +1,136 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum Role { USER MODERATOR ADMIN }
+enum AlertStatus { PENDING ACTIVE RESOLVED REMOVED }
+enum AlertType { MISSING_PERSON LOST_ITEM LOST_DOCUMENT DANGEROUS_SITUATION LOST_ANIMAL OTHER }
+enum Visibility { PUBLIC LIMITED PRIVATE ANONYMOUS }
+enum RewardStatus { PENDING APPROVED PAID CANCELLED }
+
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  passwordHash String
+  phone String?
+  role Role @default(USER)
+  isVerified Boolean @default(false)
+  points Int @default(0)
+  balanceXof Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  alerts Alert[]
+  contributions Contribution[]
+  rewards Reward[]
+  sessions Session[]
+}
+
+model Session {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  userId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([userId])
+}
+
+model Alert {
+  id String @id @default(cuid())
+  reference String @unique
+  type AlertType
+  title String
+  description String
+  country String @default("Côte d'Ivoire")
+  city String?
+  region String?
+  lat Float?
+  lng Float?
+  dateOccurred DateTime?
+  visibility Visibility @default(PUBLIC)
+  status AlertStatus @default(PENDING)
+  imageUrl String?
+  exactLocationHidden Boolean @default(true)
+  personName String?
+  personAge Int?
+  personSex String?
+  distinguishingMarks String?
+  moderatedById String?
+  moderatedAt DateTime?
+  moderationNote String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  authorId String
+  author User @relation(fields:[authorId], references:[id], onDelete:Restrict)
+  contributions Contribution[]
+  rewards Reward[]
+  reports Report[]
+  matchesAsSource MatchSuggestion[] @relation("sourceAlert")
+  matchesAsTarget MatchSuggestion[] @relation("targetAlert")
+  @@index([status, createdAt])
+  @@index([type, status])
+  @@index([city])
+  @@index([lat, lng])
+}
+
+model MatchSuggestion {
+  id String @id @default(cuid())
+  sourceAlertId String
+  targetAlertId String
+  score Float
+  nameScore Float
+  distanceKm Float?
+  dateDeltaDays Int?
+  reviewed Boolean @default(false)
+  confirmed Boolean @default(false)
+  createdAt DateTime @default(now())
+  sourceAlert Alert @relation("sourceAlert", fields:[sourceAlertId], references:[id], onDelete:Cascade)
+  targetAlert Alert @relation("targetAlert", fields:[targetAlertId], references:[id], onDelete:Cascade)
+  @@unique([sourceAlertId, targetAlertId])
+  @@index([score])
+}
+
+model Contribution {
+  id String @id @default(cuid())
+  message String
+  verified Boolean @default(false)
+  createdAt DateTime @default(now())
+  alertId String
+  userId String
+  alert Alert @relation(fields:[alertId], references:[id], onDelete:Cascade)
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([alertId, createdAt])
+}
+
+model Reward {
+  id String @id @default(cuid())
+  amountXof Int
+  status RewardStatus @default(PENDING)
+  reason String
+  createdAt DateTime @default(now())
+  paidAt DateTime?
+  alertId String
+  userId String
+  alert Alert @relation(fields:[alertId], references:[id], onDelete:Cascade)
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([userId, status])
+}
+
+model Report {
+  id String @id @default(cuid())
+  reason String
+  details String?
+  status String @default("OPEN")
+  createdAt DateTime @default(now())
+  alertId String
+  alert Alert @relation(fields:[alertId], references:[id], onDelete:Cascade)
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+  action String
+  ipHash String?
+  userId String?
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+}
